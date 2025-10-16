@@ -6,6 +6,7 @@ import os
 import shlex
 import subprocess
 import tempfile
+import threading
 from dataclasses import replace
 from pathlib import Path
 from typing import Callable, Optional, Sequence, Set
@@ -39,6 +40,7 @@ class Microsolvator:
         working_directory: Optional[Path] = None,
         run_command: Optional[RunCommand] = None,
         prepare_only: bool = False,
+        log_file: Optional[str] = "crest_run.log",
     ) -> MicrosolvationResult:
         """Execute a CREST microsolvation run and return parsed results."""
 
@@ -66,6 +68,7 @@ class Microsolvator:
                 constrain_solute=constrain_solute,
                 executor=executor,
                 prepare_only=prepare_only,
+                log_file=log_file,
             )
 
         if keep_temps:
@@ -79,6 +82,7 @@ class Microsolvator:
                 constrain_solute=constrain_solute,
                 executor=executor,
                 prepare_only=prepare_only,
+                log_file=log_file,
             )
 
         with tempfile.TemporaryDirectory(prefix="microsolvator_") as tmpdir:
@@ -92,6 +96,7 @@ class Microsolvator:
                 constrain_solute=constrain_solute,
                 executor=executor,
                 prepare_only=prepare_only,
+                log_file=log_file,
             )
 
     @classmethod
@@ -106,6 +111,7 @@ class Microsolvator:
         constrain_solute: bool,
         executor: RunCommand,
         prepare_only: bool,
+        log_file: Optional[str],
     ) -> MicrosolvationResult:
         workdir.mkdir(parents=True, exist_ok=True)
 
@@ -151,15 +157,31 @@ class Microsolvator:
                 executed=False,
             )
 
+        log_path: Optional[Path] = None
+        if log_file and log_file.strip():
+            candidate = Path(log_file)
+            if not candidate.is_absolute():
+                candidate = workdir / candidate
+            candidate.parent.mkdir(parents=True, exist_ok=True)
+            log_path = candidate
+
         env = _build_subprocess_env(
             xtb_executable=command[command.index("--xnam") + 1],
             crest_executable=command[0],
         )
 
         try:
-            completed = executor(command, workdir, env)
+            completed = executor(
+                command,
+                workdir,
+                env,
+                str(log_path) if log_path is not None else None,
+            )
         except TypeError:
-            completed = executor(command, workdir)
+            try:
+                completed = executor(command, workdir, env)
+            except TypeError:
+                completed = executor(command, workdir)
 
         best_structure = _read_optional_atoms(workdir / "crest_best.xyz")
         ensemble = _read_optional_ensemble(workdir / "full_ensemble.xyz")
@@ -182,7 +204,11 @@ def _default_runner(
     command: Sequence[str],
     workdir: Path,
     env: Optional[dict[str, str]] = None,
+    log_path: Optional[str] = None,
 ) -> subprocess.CompletedProcess[str]:
+    if log_path:
+        return _run_with_logging(command, workdir, env, Path(log_path))
+
     return subprocess.run(
         command,
         cwd=str(workdir),
@@ -190,6 +216,70 @@ def _default_runner(
         capture_output=True,
         text=True,
         env=env,
+    )
+
+
+def _run_with_logging(
+    command: Sequence[str],
+    workdir: Path,
+    env: Optional[dict[str, str]],
+    log_path: Path,
+) -> subprocess.CompletedProcess[str]:
+    stdout_buffer: list[str] = []
+    stderr_buffer: list[str] = []
+
+    with open(log_path, "w", encoding="utf-8") as log_file:
+        process = subprocess.Popen(
+            command,
+            cwd=str(workdir),
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
+
+        lock = threading.Lock()
+
+        def _consume(stream, buffer, label: str) -> None:
+            if stream is None:
+                return
+            for line in stream:
+                with lock:
+                    log_file.write(f"[{label}] {line}")
+                    log_file.flush()
+                buffer.append(line)
+
+        threads = [
+            threading.Thread(target=_consume, args=(process.stdout, stdout_buffer, "OUT")),
+            threading.Thread(target=_consume, args=(process.stderr, stderr_buffer, "ERR")),
+        ]
+
+        for thread in threads:
+            thread.daemon = True
+            thread.start()
+
+        returncode = process.wait()
+
+        for thread in threads:
+            thread.join()
+
+    stdout = "".join(stdout_buffer)
+    stderr = "".join(stderr_buffer)
+
+    if returncode != 0:
+        raise subprocess.CalledProcessError(
+            returncode,
+            command,
+            output=stdout,
+            stderr=stderr,
+        )
+
+    return subprocess.CompletedProcess(
+        args=command,
+        returncode=returncode,
+        stdout=stdout,
+        stderr=stderr,
     )
 
 

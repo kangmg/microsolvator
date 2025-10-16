@@ -32,6 +32,7 @@ result = Microsolvator.run(
     solvent=solvent,
     config=config,
     constrain_solute=True,
+    log_file="crest_run.log",
 )
 
 best = result.best_structure
@@ -66,3 +67,7 @@ For an in-depth explanation of how commands are built, how to override execution
 `Microsolvator` resolves CREST and xTB executables using, in order, explicit config paths, environment variables (`CREST_BIN`, `XTB_BIN`), binaries bundled in `microsolvator/_bin/` (installable via `install_crest`/`install_xtb`), and finally the system `PATH`.
 
 Resolved paths are injected into the command line as absolute paths (including an explicit `--xnam /abs/path/to/xtb` flag) when available.
+
+### Logging
+
+During execution, CREST stdout/stderr are streamed in real time to `crest_run.log` (relative to the working directory by default). Override with `log_file="my_crest.log"` or disable by passing `log_file=None`.

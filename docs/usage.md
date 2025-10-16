@@ -64,6 +64,12 @@ When `run_command` is omitted, `subprocess.run` is used with `check=True`, `capt
 
 Callbacks that only accept `(command, workdir)` also work; the environment argument is optional.
 
+### Live Logging
+
+By default, CREST stdout/stderr are streamed to `crest_run.log` inside the working directory while the process runs. Supply `log_file="custom.log"` (or an absolute path) to change the destination, or `log_file=None`/`""` to disable streaming.
+
+Custom `run_command` callbacks receive the resolved log path as the fourth argument and may implement bespoke logging.
+
 ## Constraint Handling
 
 If `constrain_solute=True` or `constrained_indices` are provided, an `.xcontrol` file is written in the working directory and `--nopreopt` is appended to the command (unless already enabled in the config).

@@ -1,6 +1,6 @@
 from pathlib import Path
-
 import subprocess
+import sys
 
 from ase import Atoms
 from ase.io import write as ase_write
@@ -16,6 +16,7 @@ from microsolvator.install import (
     resolve_crest_binary,
     resolve_xtb_binary,
 )
+from microsolvator.runner import _default_runner
 
 
 def test_support_tables_consistency():
@@ -41,7 +42,7 @@ def test_microsolvator_run_with_constraints_and_mock_executor(tmp_path: Path):
     config.crest_executable = str(crest_exec)
     config.xtb_executable = str(xtb_exec)
 
-    def fake_runner(command, workdir, env=None):
+    def fake_runner(command, workdir, env=None, log_path=None):
         best = Atoms("H2O", positions=[[0, 0, 0], [0.9, 0, 0], [0, 0.8, 0]])
         ensemble = [best, best.copy()]
         ase_write(workdir / "crest_best.xyz", best)
@@ -54,6 +55,8 @@ def test_microsolvator_run_with_constraints_and_mock_executor(tmp_path: Path):
         assert "--xnam" in command
         assert command[command.index("--xnam") + 1] == str(xtb_exec)
         assert command[1].startswith(str(tmp_path.resolve()))
+        assert log_path is not None
+        Path(log_path).write_text("[OUT] crest ok\n", encoding="utf-8")
         return subprocess.CompletedProcess(
             args=command,
             returncode=0,
@@ -138,3 +141,21 @@ def test_resolve_crest_package_dir(tmp_path: Path, monkeypatch):
     exe = _write_executable(tmp_path / "crest")
     monkeypatch.setattr(install_utils, "PACKAGE_BIN_DIR", tmp_path)
     assert resolve_crest_binary(None) == str(exe)
+
+
+def test_default_runner_writes_log(tmp_path: Path):
+    log_path = tmp_path / "crest_run.log"
+    cmd = [
+        sys.executable,
+        "-c",
+        "import sys; print('hello'); sys.stdout.flush(); sys.stderr.write('oops\\n')",
+    ]
+
+    result = _default_runner(cmd, tmp_path, log_path=str(log_path))
+
+    assert log_path.exists()
+    contents = log_path.read_text(encoding="utf-8")
+    assert "[OUT] hello" in contents
+    assert "[ERR] oops" in contents
+    assert "hello" in result.stdout
+    assert "oops" in result.stderr
