@@ -41,3 +41,7 @@ from microsolvator import supports_implicit_solvent
 
 supports_implicit_solvent(method="gfn2", model="alpb", solvent="h2o")
 ```
+
+## Execution Details
+
+For an in-depth explanation of how commands are built, how to override execution with `run_command`, and how working directories are managed, see [`docs/usage.md`](docs/usage.md).

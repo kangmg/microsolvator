@@ -101,8 +101,8 @@ class Microsolvator:
         solute_path = workdir / "solute.xyz"
         solvent_path = workdir / "solvent.xyz"
 
-        ase_write(solute_path, solute)
-        ase_write(solvent_path, solvent)
+        ase_write(solute_path, solute, format='xyz')
+        ase_write(solvent_path, solvent, format='xyz')
 
         constraints_written = _write_constraints(
             workdir=workdir,
