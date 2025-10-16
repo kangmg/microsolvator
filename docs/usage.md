@@ -85,9 +85,30 @@ The helper functions `microsolvator.install.install_crest` and `microsolvator.in
 `MicrosolvationResult` provides:
 
 - `command`: list of shell tokens used to invoke CREST.
+- `shell_command`: shell-escaped string representation of the command.
 - `best_structure`: lowest-energy structure as an ASE `Atoms` instance, if produced.
 - `ensemble`: list of `Atoms` for the entire ensemble (from `full_ensemble.xyz`).
 - `population_path`: Path to `full_population.dat` when present.
 - `stdout` / `stderr`: captured CREST output strings.
+- `executed`: boolean flag indicating whether CREST was run (False in `prepare_only` mode).
 
 Use `result.ensure_outputs()` to assert that at least one structure was parsed.
+
+## Prepare-Only Mode
+
+Set `prepare_only=True` to generate input files (`solute.xyz`, `solvent.xyz`, optional `.xcontrol`) and print the fully qualified CREST command without executing it:
+
+```python
+result = Microsolvator.run(
+    solute=solute,
+    solvent=solvent,
+    config=config,
+    constrain_solute=True,
+    working_directory=Path("./scratch"),
+    prepare_only=True,
+)
+
+print(result.shell_command)
+```
+
+When no explicit working directory is given, `prepare_only=True` implicitly enables `keep_temps=True` so that the generated files remain on disk for inspection. `MicrosolvatorResult.executed` will be `False`, and `stdout` / `stderr` are empty strings.

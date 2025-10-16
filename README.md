@@ -11,6 +11,8 @@ pip install git+https://github.com/kangmg/microsolvator.git
 ## Quick Start
 
 ```python
+from pathlib import Path
+
 from ase.io import read
 from microsolvator import Microsolvator, MicrosolvatorConfig
 
@@ -34,6 +36,17 @@ result = Microsolvator.run(
 
 best = result.best_structure
 ensemble = result.ensemble
+
+# Dry run to inspect the command and generated inputs
+dry_run = Microsolvator.run(
+    solute=solute,
+    solvent=solvent,
+    config=config,
+    working_directory=Path("./scratch"),
+    prepare_only=True,
+)
+
+print(dry_run.shell_command)
 ```
 
 ## Implicit Solvent Check

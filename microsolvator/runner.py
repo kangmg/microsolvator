@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shlex
 import subprocess
 import tempfile
 from dataclasses import replace
@@ -37,6 +38,7 @@ class Microsolvator:
         keep_temps: bool = False,
         working_directory: Optional[Path] = None,
         run_command: Optional[RunCommand] = None,
+        prepare_only: bool = False,
     ) -> MicrosolvationResult:
         """Execute a CREST microsolvation run and return parsed results."""
 
@@ -49,6 +51,9 @@ class Microsolvator:
 
         executor = run_command or _default_runner
 
+        if prepare_only and not keep_temps and working_directory is None:
+            keep_temps = True
+
         if working_directory is not None:
             workdir = Path(working_directory)
             workdir.mkdir(parents=True, exist_ok=True)
@@ -60,6 +65,7 @@ class Microsolvator:
                 constrained_indices=constrained_indices,
                 constrain_solute=constrain_solute,
                 executor=executor,
+                prepare_only=prepare_only,
             )
 
         if keep_temps:
@@ -72,6 +78,7 @@ class Microsolvator:
                 constrained_indices=constrained_indices,
                 constrain_solute=constrain_solute,
                 executor=executor,
+                prepare_only=prepare_only,
             )
 
         with tempfile.TemporaryDirectory(prefix="microsolvator_") as tmpdir:
@@ -84,6 +91,7 @@ class Microsolvator:
                 constrained_indices=constrained_indices,
                 constrain_solute=constrain_solute,
                 executor=executor,
+                prepare_only=prepare_only,
             )
 
     @classmethod
@@ -97,6 +105,7 @@ class Microsolvator:
         constrained_indices: Optional[Sequence[int]],
         constrain_solute: bool,
         executor: RunCommand,
+        prepare_only: bool,
     ) -> MicrosolvationResult:
         workdir.mkdir(parents=True, exist_ok=True)
 
@@ -127,6 +136,20 @@ class Microsolvator:
             solute_path=solute_path,
             solvent_path=solvent_path,
         )
+
+        if prepare_only:
+            command_str = shlex.join(command)
+            print(command_str)
+            return MicrosolvationResult(
+                command=command,
+                working_directory=workdir,
+                best_structure=None,
+                ensemble=[],
+                population_path=None,
+                stdout="",
+                stderr="",
+                executed=False,
+            )
 
         env = _build_subprocess_env(
             xtb_executable=command[command.index("--xnam") + 1],

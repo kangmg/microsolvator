@@ -77,7 +77,44 @@ def test_microsolvator_run_with_constraints_and_mock_executor(tmp_path: Path):
     assert result.best_structure is not None
     assert len(result.ensemble) == 2
     assert result.population_path is not None
+    assert result.shell_command.endswith(str(xtb_exec))
     result.ensure_outputs()
+
+
+def test_prepare_only_generates_inputs_and_prints_command(tmp_path: Path, capsys):
+    solute = Atoms("H2O", positions=[[0, 0, 0], [0.9, 0, 0], [0, 0.7, 0]])
+    solvent = Atoms("H2O", positions=[[0, 0, 0], [0.9, 0, 0], [0, 0.7, 0]])
+
+    config = MicrosolvatorConfig(
+        nsolv=2,
+        method="gfn2",
+    )
+
+    crest_exec = _write_executable(tmp_path / "crest_prepare")
+    xtb_exec = _write_executable(tmp_path / "xtb_prepare")
+    config.crest_executable = str(crest_exec)
+    config.xtb_executable = str(xtb_exec)
+
+    result = Microsolvator.run(
+        solute=solute,
+        solvent=solvent,
+        config=config,
+        constrain_solute=True,
+        working_directory=tmp_path,
+        prepare_only=True,
+    )
+
+    output = capsys.readouterr().out.strip()
+
+    assert result.executed is False
+    assert result.best_structure is None
+    assert result.ensemble == []
+    assert result.population_path is None
+    assert (tmp_path / "solute.xyz").exists()
+    assert (tmp_path / "solvent.xyz").exists()
+    assert (tmp_path / ".xcontrol").exists()
+    assert not (tmp_path / "crest_best.xyz").exists()
+    assert result.shell_command == output
 
 
 def _write_executable(path: Path) -> Path:

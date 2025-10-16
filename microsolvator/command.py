@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import List
+from shutil import which
 
 from .config import MicrosolvatorConfig
 
@@ -38,4 +39,7 @@ def _normalize_exec_path(executable: str) -> str:
     string_path = str(path)
     if os.sep in string_path or (os.altsep and os.altsep in string_path):
         return str(path.resolve())
+    resolved = which(executable)
+    if resolved:
+        return str(Path(resolved).resolve())
     return executable

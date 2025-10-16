@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shlex
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Sequence
@@ -20,9 +21,19 @@ class MicrosolvationResult:
     population_path: Optional[Path]
     stdout: str
     stderr: str
+    executed: bool = True
 
     def ensure_outputs(self) -> None:
-        """Raise if no ensemble was parsed."""
+        """Raise if no ensemble was parsed for an executed run."""
+
+        if not self.executed:
+            return
 
         if not self.ensemble and self.best_structure is None:
             raise ValueError("Microsolvation run produced no structures")
+
+    @property
+    def shell_command(self) -> str:
+        """Return the command as a shell-escaped string."""
+
+        return shlex.join(self.command)
