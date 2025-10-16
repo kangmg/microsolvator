@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable, List, Optional, Sequence
+from typing import List, Optional, Sequence
 
 
 @dataclass
@@ -16,7 +16,8 @@ class MicrosolvatorConfig:
     mdtime: float = 50.0
     charge: int = 0
     uhf: int = 0
-    crest_executable: str = "crest"
+    crest_executable: Optional[str] = None
+    xtb_executable: Optional[str] = None
     implicit_model: Optional[str] = None
     implicit_solvent: Optional[str] = None
     ensemble: bool = True

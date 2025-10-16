@@ -30,25 +30,39 @@ print(result.command)
 Possible output:
 
 ```
-['crest', 'solute.xyz', '--qcg', 'solvent.xyz', '--nsolv', '3', '--T', '298.0', '--mdtime', '50.0', '--ensemble', '--alpb', 'h2o', '--chrg', '0', '--uhf', '0']
+['/abs/path/crest', '/abs/path/solute.xyz', '--qcg', '/abs/path/solvent.xyz', '--nsolv', '3', '--T', '298.0', '--mdtime', '50.0', '--ensemble', '--alpb', 'h2o', '--chrg', '0', '--uhf', '0', '--xnam', '/abs/path/xtb']
 ```
 
-The command always begins with the CREST executable (`config.crest_executable`) followed by the temporary solute file. Flags are appended in the order defined by `MicrosolvatorConfig.build_flag_list()`.
+The command always begins with an auto-resolved CREST executable. The resolution order is:
+
+1. `config.crest_executable` if explicitly provided.
+2. Environment variable `CREST_BIN` if it points to an existing file.
+3. A binary stored under `microsolvator/_bin/` (populated via `install_crest`).
+4. Fallback to `"crest"`, allowing the system `PATH` to resolve it.
+
+xTB paths follow the same order using `config.xtb_executable`, `XTB_BIN`, the package directory (via `install_xtb`), and finally `"xtb"`. The resolved path is injected both via `--xnam` (so CREST sees it explicitly) and the `XTB_BIN` environment variable.
 
 ## Custom Execution (`run_command`)
 
-`Microsolvator.run` accepts a `run_command` callback if you need to redirect command execution (e.g., mocking in tests). The callback signature is:
+`Microsolvator.run` accepts a `run_command` callback if you need to redirect command execution (e.g., mocking in tests). The preferred signature is:
 
 ```python
-def run_command(command: Sequence[str], workdir: Path) -> subprocess.CompletedProcess[str]:
+def run_command(
+    command: Sequence[str],
+    workdir: Path,
+    env: Optional[dict[str, str]] = None,
+) -> subprocess.CompletedProcess[str]:
     ...
 ```
 
 - `command` is the list described above.
 - `workdir` is the directory containing the generated input files (solute.xyz, solvent.xyz, optional `.xcontrol`).
+- `env` contains the environment passed to `subprocess.run`, pre-populated with `CREST_BIN` and `XTB_BIN` based on the resolution logic.
 - The callback must return a `subprocess.CompletedProcess` with `stdout`, `stderr`, and `returncode` set.
 
-When `run_command` is omitted, `subprocess.run` is used with `check=True`, `capture_output=True`, and `text=True`.
+When `run_command` is omitted, `subprocess.run` is used with `check=True`, `capture_output=True`, `text=True`, and the environment described above.
+
+Callbacks that only accept `(command, workdir)` also work; the environment argument is optional.
 
 ## Constraint Handling
 
@@ -61,6 +75,10 @@ If `constrain_solute=True` or `constrained_indices` are provided, an `.xcontrol`
 - Default (no `working_directory`, `keep_temps=False`): temporary files are discarded automatically.
 
 The working directory always contains the files passed to CREST (`solute.xyz`, `solvent.xyz`, `.xcontrol` if any). Output files (`crest_best.xyz`, `full_ensemble.xyz`, `full_population.dat`) are read from the same directory.
+
+## Managing Bundled Binaries
+
+The helper functions `microsolvator.install.install_crest` and `microsolvator.install.install_xtb` download the official Linux tarballs, extract the executables into `microsolvator/_bin/`, ensure they are executable, and remove the downloaded `.tar.xz` archives. Once installed, the resolvers automatically pick them up without additional configuration.
 
 ## Result Introspection
 

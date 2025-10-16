@@ -2,22 +2,24 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import tempfile
 from dataclasses import replace
 from pathlib import Path
-from typing import Callable, Iterable, Optional, Sequence, Set
+from typing import Callable, Optional, Sequence, Set
 
 from ase import Atoms
 from ase.io import read as ase_read, write as ase_write
 
 from .command import build_crest_command
 from .config import MicrosolvatorConfig
+from .install import resolve_crest_binary, resolve_xtb_binary
 from .results import MicrosolvationResult
 from .support import validate_implicit_choice
 
 
-RunCommand = Callable[[Sequence[str], Path], subprocess.CompletedProcess[str]]
+RunCommand = Callable[..., subprocess.CompletedProcess[str]]
 
 
 class Microsolvator:
@@ -115,13 +117,26 @@ class Microsolvator:
         if constraints_written and not config.nopreopt:
             exec_config = replace(config, nopreopt=True)
 
+        crest_executable = resolve_crest_binary(exec_config.crest_executable)
+        xtb_executable = resolve_xtb_binary(exec_config.xtb_executable)
+
         command = build_crest_command(
             config=exec_config,
+            crest_executable=crest_executable,
+            xtb_executable=xtb_executable,
             solute_path=solute_path,
             solvent_path=solvent_path,
         )
 
-        completed = executor(command, workdir)
+        env = _build_subprocess_env(
+            xtb_executable=command[command.index("--xnam") + 1],
+            crest_executable=command[0],
+        )
+
+        try:
+            completed = executor(command, workdir, env)
+        except TypeError:
+            completed = executor(command, workdir)
 
         best_structure = _read_optional_atoms(workdir / "crest_best.xyz")
         ensemble = _read_optional_ensemble(workdir / "full_ensemble.xyz")
@@ -140,14 +155,30 @@ class Microsolvator:
         return result
 
 
-def _default_runner(command: Sequence[str], workdir: Path) -> subprocess.CompletedProcess[str]:
+def _default_runner(
+    command: Sequence[str],
+    workdir: Path,
+    env: Optional[dict[str, str]] = None,
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
         cwd=str(workdir),
         check=True,
         capture_output=True,
         text=True,
+        env=env,
     )
+
+
+def _build_subprocess_env(
+    *,
+    xtb_executable: str,
+    crest_executable: str,
+) -> dict[str, str]:
+    env = os.environ.copy()
+    env["CREST_BIN"] = crest_executable
+    env["XTB_BIN"] = xtb_executable
+    return env
 
 
 def _write_constraints(

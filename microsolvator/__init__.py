@@ -9,6 +9,13 @@ from .support import (
     list_supported_implicit_solvents,
     supports_implicit_solvent,
 )
+from .install import (
+    PACKAGE_BIN_DIR,
+    install_crest,
+    install_xtb,
+    resolve_crest_binary,
+    resolve_xtb_binary,
+)
 
 __all__ = [
     "__version__",
@@ -17,4 +24,9 @@ __all__ = [
     "Microsolvator",
     "list_supported_implicit_solvents",
     "supports_implicit_solvent",
+    "install_crest",
+    "install_xtb",
+    "resolve_crest_binary",
+    "resolve_xtb_binary",
+    "PACKAGE_BIN_DIR",
 ]

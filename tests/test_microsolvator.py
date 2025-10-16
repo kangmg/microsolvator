@@ -11,6 +11,11 @@ from microsolvator import (
     list_supported_implicit_solvents,
     supports_implicit_solvent,
 )
+from microsolvator import install as install_utils
+from microsolvator.install import (
+    resolve_crest_binary,
+    resolve_xtb_binary,
+)
 
 
 def test_support_tables_consistency():
@@ -31,12 +36,24 @@ def test_microsolvator_run_with_constraints_and_mock_executor(tmp_path: Path):
         implicit_solvent="h2o",
     )
 
-    def fake_runner(command, workdir):
+    crest_exec = _write_executable(tmp_path / "crest_bin")
+    xtb_exec = _write_executable(tmp_path / "xtb_bin")
+    config.crest_executable = str(crest_exec)
+    config.xtb_executable = str(xtb_exec)
+
+    def fake_runner(command, workdir, env=None):
         best = Atoms("H2O", positions=[[0, 0, 0], [0.9, 0, 0], [0, 0.8, 0]])
         ensemble = [best, best.copy()]
         ase_write(workdir / "crest_best.xyz", best)
         ase_write(workdir / "full_ensemble.xyz", ensemble)
         (workdir / "full_population.dat").write_text("1 0.5\n", encoding="utf-8")
+        assert env is not None
+        assert env.get("CREST_BIN") == str(crest_exec)
+        assert env.get("XTB_BIN") == str(xtb_exec)
+        assert command[0] == str(crest_exec)
+        assert "--xnam" in command
+        assert command[command.index("--xnam") + 1] == str(xtb_exec)
+        assert command[1].startswith(str(tmp_path.resolve()))
         return subprocess.CompletedProcess(
             args=command,
             returncode=0,
@@ -61,3 +78,26 @@ def test_microsolvator_run_with_constraints_and_mock_executor(tmp_path: Path):
     assert len(result.ensemble) == 2
     assert result.population_path is not None
     result.ensure_outputs()
+
+
+def _write_executable(path: Path) -> Path:
+    path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    path.chmod(0o755)
+    return path
+
+
+def test_resolve_crest_explicit(tmp_path: Path):
+    exe = _write_executable(tmp_path / "custom_crest")
+    assert resolve_crest_binary(str(exe)) == str(exe)
+
+
+def test_resolve_xtb_env(tmp_path: Path, monkeypatch):
+    exe = _write_executable(tmp_path / "xtb_env")
+    monkeypatch.setenv("XTB_BIN", str(exe))
+    assert resolve_xtb_binary(None) == str(exe)
+
+
+def test_resolve_crest_package_dir(tmp_path: Path, monkeypatch):
+    exe = _write_executable(tmp_path / "crest")
+    monkeypatch.setattr(install_utils, "PACKAGE_BIN_DIR", tmp_path)
+    assert resolve_crest_binary(None) == str(exe)
