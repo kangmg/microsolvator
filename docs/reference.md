@@ -24,7 +24,7 @@ from microsolvator import MicrosolvatorConfig
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `nsolv` | `int` | _(required)_ | Number of solvent molecules to grow via CREST QCG. Must be greater than zero. |
-| `method` | `str` | `"gfn2"` | Method string used when validating implicit solvents. |
+| `method` | `str` | `"gfn2"` | Method string used for implicit solvent validation **and** translated into CREST flags (`--gfn 0/1/2` or `--gfnff`). |
 | `temperature` | `float` | `298.0` | Target temperature passed to CREST (`--T`). |
 | `mdtime` | `float` | `50.0` | Meta-dynamics/MD simulation time in ps (`--mdtime`). |
 | `charge` | `int` | `0` | Total system charge (`--chrg`). |
@@ -78,7 +78,7 @@ result = Microsolvator.run(
 1. ASE `Atoms` objects are serialized to `solute.xyz` and `solvent.xyz` (absolute paths) inside the working directory.
 2. Constraint indices are merged (from `constrained_indices` and `constrain_solute`). If any exist, `.xcontrol` is written and `--nopreopt` is injected if not already set.
 3. CREST and xTB executables are resolved in the following order: explicit config path → environment variable (`CREST_BIN` / `XTB_BIN`) → package `_bin` directory → system `PATH`. Resolved values are converted to absolute paths.
-4. `build_crest_command` assembles the final command list using absolute paths for binaries and input files, always appending `--xnam /abs/path/to/xtb`.
+4. `build_crest_command` assembles the final command list using absolute paths for binaries and input files, inserting the appropriate `--gfn`/`--gfnff` flag and always appending `--xnam /abs/path/to/xtb`.
 5. A subprocess environment is created with `CREST_BIN` and `XTB_BIN` set to the resolved paths.
 6. Unless `prepare_only=True`, the command is executed (via either the provided `run_command` or the default executor).
 7. During execution, stdout/stderr are streamed to `log_file` (default `crest_run.log`) with `[OUT]`/`[ERR]` prefixes while also being captured in memory for the returned result. Custom `run_command` callbacks receive the resolved log path as the fourth argument and may override logging behaviour.
@@ -162,7 +162,7 @@ print(result.shell_command)
 Possible output:
 
 ```
-/content/crest/crest /content/solute.xyz --qcg /content/solvent.xyz --nsolv 3 --T 298.0 --mdtime 50.0 --ensemble --alpb h2o --chrg 0 --uhf 0 --nopreopt --xnam /content/xtb-dist/bin/xtb
+/content/crest/crest /content/solute.xyz --qcg /content/solvent.xyz --nsolv 3 --T 298 --mdtime 50.0 --gfn 2 --ensemble --alpb h2o --chrg 0 --uhf 0 --nopreopt --xnam /content/xtb-dist/bin/xtb
 ```
 
 The command string can be copied directly into a shell or scheduler script.

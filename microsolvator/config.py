@@ -32,8 +32,10 @@ class MicrosolvatorConfig:
             raise ValueError("nsolv must be a positive integer")
         flags.extend(["--nsolv", str(self.nsolv)])
 
-        flags.extend(["--T", str(self.temperature)])
+        flags.extend(["--T", "%g" % self.temperature])
         flags.extend(["--mdtime", str(self.mdtime)])
+
+        flags.extend(_method_flags(self.method))
 
         if self.ensemble:
             flags.append("--ensemble")
@@ -58,3 +60,18 @@ class MicrosolvatorConfig:
         """Helper for creating configs from keyword arguments."""
 
         return cls(**kwargs)  # type: ignore[arg-type]
+
+
+def _method_flags(method: str) -> List[str]:
+    name = method.strip().lower()
+
+    if name in {"gfn2", "gfn-2"}:
+        return ["--gfn", "2"]
+    if name in {"gfn1", "gfn-1"}:
+        return ["--gfn", "1"]
+    if name in {"gfn0", "gfn-0"}:
+        return ["--gfn", "0"]
+    if name in {"gfnff", "gfn-ff", "ff"}:
+        return ["--gfnff"]
+
+    raise ValueError(f"Unsupported method '{method}' for CREST run")

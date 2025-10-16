@@ -58,6 +58,8 @@ def test_microsolvator_run_with_constraints_and_mock_executor(tmp_path: Path):
         assert command[0] == str(crest_exec)
         assert "--xnam" in command
         assert command[command.index("--xnam") + 1] == str(xtb_exec)
+        assert "--gfn" in command
+        assert command[command.index("--gfn") + 1] == "2"
         assert command[1].startswith(str(tmp_path.resolve()))
         assert log_path is not None
         Path(log_path).write_text("[OUT] crest ok\n", encoding="utf-8")
@@ -85,6 +87,7 @@ def test_microsolvator_run_with_constraints_and_mock_executor(tmp_path: Path):
     assert len(result.ensemble) == 2
     assert result.population_path is not None
     assert result.shell_command.endswith(str(xtb_exec))
+    assert "--gfn" in result.command
     assert result.final is not None
     assert len(result.traj) == 2
     result.ensure_outputs()
@@ -125,6 +128,7 @@ def test_prepare_only_generates_inputs_and_prints_command(tmp_path: Path, capsys
     assert (tmp_path / "solvent.xyz").exists()
     assert (tmp_path / ".xcontrol").exists()
     assert not (tmp_path / "crest_best.xyz").exists()
+    assert "--gfn" in output
     assert result.shell_command == output
 
 

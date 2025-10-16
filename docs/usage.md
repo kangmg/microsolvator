@@ -30,7 +30,7 @@ print(result.command)
 Possible output:
 
 ```
-['/abs/path/crest', '/abs/path/solute.xyz', '--qcg', '/abs/path/solvent.xyz', '--nsolv', '3', '--T', '298.0', '--mdtime', '50.0', '--ensemble', '--alpb', 'h2o', '--chrg', '0', '--uhf', '0', '--xnam', '/abs/path/xtb']
+['/abs/path/crest', '/abs/path/solute.xyz', '--qcg', '/abs/path/solvent.xyz', '--nsolv', '3', '--T', '298', '--mdtime', '50.0', '--gfn', '2', '--ensemble', '--alpb', 'h2o', '--chrg', '0', '--uhf', '0', '--xnam', '/abs/path/xtb']
 ```
 
 The command always begins with an auto-resolved CREST executable. The resolution order is:
