@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "microsolvator"
+version = "0.1.0"
+description = "ASE wrapper for CREST microsolvation workflows"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+  { name = "Factory Droid" }
+]
+dependencies = [
+  "ase>=3.26.0",
+]
+
+[project.optional-dependencies]
+tests = [
+  "pytest>=8.4",
+]
+
+[project.urls]
+Homepage = "https://example.com/microsolvator"
+Repository = "https://example.com/microsolvator/repo"
+
+[tool.hatch.build.targets.wheel]
+packages = ["microsolvator"]
+
+[tool.hatch.envs.tests]
+dependencies = ["pytest>=8.4"]
+commands = [["python", "-m", "pytest"]]
