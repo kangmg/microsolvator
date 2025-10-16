@@ -14,6 +14,7 @@ class MicrosolvatorConfig:
     method: str = "gfn2"
     temperature: float = 298.0
     mdtime: float = 50.0
+    threads: int = 1
     charge: int = 0
     uhf: int = 0
     crest_executable: Optional[str] = None
@@ -32,10 +33,13 @@ class MicrosolvatorConfig:
             raise ValueError("nsolv must be a positive integer")
         flags.extend(["--nsolv", str(self.nsolv)])
 
-        flags.extend(["--T", "%g" % self.temperature])
+        flags.extend(["--temp", "%g" % self.temperature])
+        if self.threads <= 0:
+            raise ValueError("threads must be a positive integer")
+        flags.extend(["--T", str(self.threads)])
         flags.extend(["--mdtime", str(self.mdtime)])
 
-        flags.extend(_method_flags(self.method))
+        flags.extend(["--enslvl", _method_flag(self.method)])
 
         if self.ensemble:
             flags.append("--ensemble")
@@ -62,16 +66,16 @@ class MicrosolvatorConfig:
         return cls(**kwargs)  # type: ignore[arg-type]
 
 
-def _method_flags(method: str) -> List[str]:
+def _method_flag(method: str) -> str:
     name = method.strip().lower()
 
     if name in {"gfn2", "gfn-2"}:
-        return ["--gfn", "2"]
+        return "gfn2"
     if name in {"gfn1", "gfn-1"}:
-        return ["--gfn", "1"]
+        return "gfn1"
     if name in {"gfn0", "gfn-0"}:
-        return ["--gfn", "0"]
+        return "gfn0"
     if name in {"gfnff", "gfn-ff", "ff"}:
-        return ["--gfnff"]
+        return "gfnff"
 
     raise ValueError(f"Unsupported method '{method}' for CREST run")

@@ -30,7 +30,7 @@ print(result.command)
 Possible output:
 
 ```
-['/abs/path/crest', '/abs/path/solute.xyz', '--qcg', '/abs/path/solvent.xyz', '--nsolv', '3', '--T', '298', '--mdtime', '50.0', '--gfn', '2', '--ensemble', '--alpb', 'h2o', '--chrg', '0', '--uhf', '0', '--xnam', '/abs/path/xtb']
+['/abs/path/crest', '/abs/path/solute.xyz', '--qcg', '/abs/path/solvent.xyz', '--nsolv', '3', '--temp', '298', '--T', '1', '--mdtime', '50.0', '--enslvl', 'gfn2', '--ensemble', '--alpb', 'h2o', '--chrg', '0', '--uhf', '0', '--xnam', '/abs/path/xtb']
 ```
 
 The command always begins with an auto-resolved CREST executable. The resolution order is:
@@ -41,6 +41,8 @@ The command always begins with an auto-resolved CREST executable. The resolution
 4. Fallback to `"crest"`, allowing the system `PATH` to resolve it.
 
 xTB paths follow the same order using `config.xtb_executable`, `XTB_BIN`, the package directory (via `install_xtb`), and finally `"xtb"`. The resolved path is injected both via `--xnam` (so CREST sees it explicitly) and the `XTB_BIN` environment variable.
+
+Threads (CREST `--T`) default to `config.threads` (1 if unspecified). Temperature is mapped to `--temp` instead of `--T`.
 
 ## Custom Execution (`run_command`)
 

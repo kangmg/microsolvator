@@ -25,6 +25,7 @@ config = MicrosolvatorConfig(
     implicit_solvent="h2o",
     crest_executable="/abs/path/crest",
     xtb_executable="/abs/path/xtb",
+    threads=12,
 )
 
 result = Microsolvator.run(
@@ -51,6 +52,8 @@ dry_run = Microsolvator.run(
 
 print(dry_run.shell_command)
 ```
+
+`threads` maps directly to CREST's `--T` (number of threads); temperature is now passed via `--temp`.
 
 ## Implicit Solvent Check
 
