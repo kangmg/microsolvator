@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import shlex
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Sequence
 
@@ -22,6 +22,8 @@ class MicrosolvationResult:
     stdout: str
     stderr: str
     executed: bool = True
+    final: Optional[Atoms] = None
+    traj: List[Atoms] = field(default_factory=list)
 
     def ensure_outputs(self) -> None:
         """Raise if no ensemble was parsed for an executed run."""
@@ -29,7 +31,7 @@ class MicrosolvationResult:
         if not self.executed:
             return
 
-        if not self.ensemble and self.best_structure is None:
+        if not self.ensemble and self.best_structure is None and self.final is None:
             raise ValueError("Microsolvation run produced no structures")
 
     @property

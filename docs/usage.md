@@ -94,6 +94,8 @@ The helper functions `microsolvator.install.install_crest` and `microsolvator.in
 - `shell_command`: shell-escaped string representation of the command.
 - `best_structure`: lowest-energy structure as an ASE `Atoms` instance, if produced.
 - `ensemble`: list of `Atoms` for the entire ensemble (from `full_ensemble.xyz`).
+- `final`: final cluster structure from `grow/cluster.xyz`, when available.
+- `traj`: list of trajectory frames parsed from `grow/qcg_grow.xyz`.
 - `population_path`: Path to `full_population.dat` when present.
 - `stdout` / `stderr`: captured CREST output strings.
 - `executed`: boolean flag indicating whether CREST was run (False in `prepare_only` mode).

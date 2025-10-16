@@ -37,6 +37,8 @@ result = Microsolvator.run(
 
 best = result.best_structure
 ensemble = result.ensemble
+final_cluster = result.final
+trajectory = result.traj
 
 # Dry run to inspect the command and generated inputs
 dry_run = Microsolvator.run(

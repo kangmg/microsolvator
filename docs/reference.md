@@ -96,6 +96,8 @@ Attributes exposed on the returned object:
 | `working_directory` | `pathlib.Path` | Directory containing input/output files. |
 | `best_structure` | `Optional[ase.Atoms]` | Parsed `crest_best.xyz`, if available. |
 | `ensemble` | `list[ase.Atoms]` | Parsed `full_ensemble.xyz` structures. Empty when not produced or `prepare_only=True`. |
+| `final` | `Optional[ase.Atoms]` | Parsed `grow/cluster.xyz` (final cluster snapshot), when available. |
+| `traj` | `list[ase.Atoms]` | Parsed `grow/qcg_grow.xyz` trajectory frames (may be empty). |
 | `population_path` | `Optional[pathlib.Path]` | Path to `full_population.dat` when present. |
 | `stdout` / `stderr` | `str` | Captured CREST output streams (empty in prepare-only mode). |
 | `executed` | `bool` | Indicates whether CREST was actually run. |

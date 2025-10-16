@@ -155,6 +155,8 @@ class Microsolvator:
                 stdout="",
                 stderr="",
                 executed=False,
+                final=None,
+                traj=[],
             )
 
         log_path: Optional[Path] = None
@@ -185,6 +187,9 @@ class Microsolvator:
 
         best_structure = _read_optional_atoms(workdir / "crest_best.xyz")
         ensemble = _read_optional_ensemble(workdir / "full_ensemble.xyz")
+        grow_dir = workdir / "grow"
+        final_cluster = _read_optional_atoms(grow_dir / "cluster.xyz")
+        traj = _read_optional_ensemble(grow_dir / "qcg_grow.xyz")
         population_path = (workdir / "full_population.dat") if (workdir / "full_population.dat").exists() else None
 
         result = MicrosolvationResult(
@@ -195,6 +200,8 @@ class Microsolvator:
             population_path=population_path,
             stdout=completed.stdout,
             stderr=completed.stderr,
+            final=final_cluster,
+            traj=traj,
         )
         result.ensure_outputs()
         return result

@@ -47,6 +47,10 @@ def test_microsolvator_run_with_constraints_and_mock_executor(tmp_path: Path):
         ensemble = [best, best.copy()]
         ase_write(workdir / "crest_best.xyz", best)
         ase_write(workdir / "full_ensemble.xyz", ensemble)
+        grow_dir = workdir / "grow"
+        grow_dir.mkdir(exist_ok=True)
+        ase_write(grow_dir / "cluster.xyz", best)
+        ase_write(grow_dir / "qcg_grow.xyz", ensemble)
         (workdir / "full_population.dat").write_text("1 0.5\n", encoding="utf-8")
         assert env is not None
         assert env.get("CREST_BIN") == str(crest_exec)
@@ -81,6 +85,8 @@ def test_microsolvator_run_with_constraints_and_mock_executor(tmp_path: Path):
     assert len(result.ensemble) == 2
     assert result.population_path is not None
     assert result.shell_command.endswith(str(xtb_exec))
+    assert result.final is not None
+    assert len(result.traj) == 2
     result.ensure_outputs()
 
 
@@ -112,6 +118,8 @@ def test_prepare_only_generates_inputs_and_prints_command(tmp_path: Path, capsys
     assert result.executed is False
     assert result.best_structure is None
     assert result.ensemble == []
+    assert result.final is None
+    assert result.traj == []
     assert result.population_path is None
     assert (tmp_path / "solute.xyz").exists()
     assert (tmp_path / "solvent.xyz").exists()
