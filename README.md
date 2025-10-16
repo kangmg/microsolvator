@@ -5,7 +5,7 @@ ASE-driven wrapper for running CREST quantum cluster growth microsolvation workf
 ## Installation
 
 ```bash
-pip install .
+pip install git+https://github.com/kangmg/microsolvator.git
 ```
 
 ## Quick Start
