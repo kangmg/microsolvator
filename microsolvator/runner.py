@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import os
 import shlex
 import subprocess
@@ -172,18 +173,18 @@ class Microsolvator:
             crest_executable=command[0],
         )
 
-        try:
+        nparams = _count_positional_params(executor)
+        if nparams >= 4:
             completed = executor(
                 command,
                 workdir,
                 env,
                 str(log_path) if log_path is not None else None,
             )
-        except TypeError:
-            try:
-                completed = executor(command, workdir, env)
-            except TypeError:
-                completed = executor(command, workdir)
+        elif nparams == 3:
+            completed = executor(command, workdir, env)
+        else:
+            completed = executor(command, workdir)
 
         best_structure = _read_optional_atoms(workdir / "crest_best.xyz")
         ensemble = _read_optional_ensemble(workdir / "full_ensemble.xyz")
@@ -205,6 +206,19 @@ class Microsolvator:
         )
         result.ensure_outputs()
         return result
+
+
+def _count_positional_params(func: Callable) -> int:
+    """Count the number of positional parameters a callable accepts."""
+    try:
+        sig = inspect.signature(func)
+    except (ValueError, TypeError):
+        return 4  # assume full signature on failure
+    return sum(
+        1
+        for p in sig.parameters.values()
+        if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
+    )
 
 
 def _default_runner(

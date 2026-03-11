@@ -136,19 +136,21 @@ def _install_binary(
     extract_dir.mkdir()
 
     with tarfile.open(archive_path, mode="r:xz") as tar:
-        tar.extractall(path=extract_dir)
+        tar.extractall(path=extract_dir, filter="data")
 
     archive_path.unlink(missing_ok=True)
 
     binary_path = _promote_binary(extract_dir, expected_binary)
 
-    if force and (PACKAGE_BIN_DIR / expected_binary).exists():
-        (PACKAGE_BIN_DIR / expected_binary).unlink()
-
     if binary_path is None:
+        shutil.rmtree(extract_dir, ignore_errors=True)
         raise FileNotFoundError(f"Failed to locate {expected_binary} inside extracted archive")
 
     final_path = PACKAGE_BIN_DIR / expected_binary
+    if final_path.exists() and not force:
+        shutil.rmtree(extract_dir, ignore_errors=True)
+        return final_path
+
     if final_path.exists():
         final_path.unlink()
     shutil.move(str(binary_path), final_path)
