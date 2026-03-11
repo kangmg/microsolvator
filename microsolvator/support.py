@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from .config import _method_flag
+
 
 _SOLVENT_TABLE: Dict[str, Dict[str, Dict[str, bool]]] = {
     "gfn1": {
@@ -110,7 +112,7 @@ _SOLVENT_TABLE: Dict[str, Dict[str, Dict[str, bool]]] = {
             "h2o": True,
         },
     },
-    "gfn-ff": {
+    "gfnff": {
         "alpb": {
             "acetone": True,
             "acetonitrile": True,
@@ -140,10 +142,18 @@ _SOLVENT_TABLE: Dict[str, Dict[str, Dict[str, bool]]] = {
 }
 
 
+def _normalize_method(method: str) -> str:
+    """Normalize method name to match _SOLVENT_TABLE keys."""
+    try:
+        return _method_flag(method)
+    except ValueError:
+        return method.lower()
+
+
 def supports_implicit_solvent(*, method: str, model: str, solvent: str) -> bool:
     """Return True if the method/model/solvent combination is supported."""
 
-    method_key = method.lower()
+    method_key = _normalize_method(method)
     model_key = model.lower()
     solvent_key = solvent.lower()
 
@@ -168,7 +178,7 @@ def list_supported_implicit_solvents(
 
     data: Dict[str, Dict[str, Tuple[str, ...]]] = {}
     for method_key, models in _SOLVENT_TABLE.items():
-        if method and method_key != method.lower():
+        if method and method_key != _normalize_method(method):
             continue
         data[method_key] = {}
         for model_key, solvents in models.items():
