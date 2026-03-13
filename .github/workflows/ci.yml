@@ -89,5 +89,11 @@ jobs:
       - name: Run integration tests
         env:
           MICROSOLVATOR_INTEGRATION: "1"
+          OMP_STACKSIZE: "4G"
+          OMP_NUM_THREADS: "1,1"
+          OMP_MAX_ACTIVE_LEVELS: "1"
+          OPENBLAS_NUM_THREADS: "1"
         timeout-minutes: 30
-        run: python -m pytest tests/test_integration.py -v -s
+        run: |
+          ulimit -s unlimited
+          python -m pytest tests/test_integration.py -v -s

@@ -118,18 +118,8 @@ class TestCrestQcgRun:
         # stdout should contain CREST output
         assert result.stdout, "CREST produced no stdout"
 
-    @pytest.mark.xfail(
-        reason="CREST --ensemble + --qcg segfaults in the pre-built GNU-12 binary on GitHub Actions",
-        raises=subprocess.CalledProcessError,
-        strict=False,
-    )
     def test_h2o_microsolvation_with_ensemble(self, tmp_path):
-        """Run grow + ensemble with 2 solvent molecules.
-
-        The pre-built CREST binary (crest-gnu-12-ubuntu-latest) segfaults
-        during the ensemble step of QCG on GitHub Actions runners.  This is
-        an upstream CREST issue, not a microsolvator bug.
-        """
+        """Run grow + ensemble with 2 solvent molecules."""
         install_crest(force=False)
         install_xtb(force=False)
 
