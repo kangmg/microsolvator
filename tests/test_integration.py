@@ -118,6 +118,16 @@ class TestCrestQcgRun:
         # stdout should contain CREST output
         assert result.stdout, "CREST produced no stdout"
 
+    @pytest.mark.xfail(
+        reason=(
+            "CREST --ensemble + --qcg segfaults (SIGSEGV) in the statically-linked "
+            "crest-gnu-12-ubuntu-latest binary on GitHub Actions runners. "
+            "Grow-only tests pass; the ensemble code path in CREST itself is unstable "
+            "in this build. Will auto-pass when a fixed CREST release is available."
+        ),
+        raises=subprocess.CalledProcessError,
+        strict=False,
+    )
     def test_h2o_microsolvation_with_ensemble(self, tmp_path):
         """Run grow + ensemble with 2 solvent molecules."""
         install_crest(force=False)
