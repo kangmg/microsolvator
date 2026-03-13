@@ -119,7 +119,11 @@ class TestCrestQcgRun:
         assert result.stdout, "CREST produced no stdout"
 
     def test_h2o_microsolvation_with_ensemble(self, tmp_path):
-        """Run grow + ensemble with 1 solvent molecule."""
+        """Run grow + ensemble with 2 solvent molecules.
+
+        Note: nsolv=1 + ensemble causes a SIGSEGV in some CREST builds,
+        so we use nsolv=2 to avoid the upstream bug.
+        """
         install_crest(force=False)
         install_xtb(force=False)
 
@@ -130,7 +134,7 @@ class TestCrestQcgRun:
         solvent = solute.copy()
 
         config = MicrosolvatorConfig(
-            nsolv=1,
+            nsolv=2,
             method="gfn2",
             threads=1,
             mdtime=5.0,
