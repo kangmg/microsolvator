@@ -28,6 +28,26 @@ pytestmark = pytest.mark.skipif(
     reason="Set MICROSOLVATOR_INTEGRATION=1 to run integration tests",
 )
 
+# Equilibrium-like H2O geometries.  Solvent is slightly perturbed so
+# that CREST QCG does not start with two identical coordinate sets,
+# which can cause numerical issues during initial cluster placement.
+_SOLUTE = Atoms(
+    "OH2",
+    positions=[
+        [0.0000, 0.0000, 0.1173],
+        [-0.7572, 0.0000, -0.4692],
+        [0.7572, 0.0000, -0.4692],
+    ],
+)
+_SOLVENT = Atoms(
+    "OH2",
+    positions=[
+        [0.0000, 0.0000, 0.1205],
+        [-0.7600, 0.0000, -0.4710],
+        [0.7600, 0.0000, -0.4710],
+    ],
+)
+
 
 # ------------------------------------------------------------------
 # 1. install_crest / install_xtb
@@ -89,11 +109,8 @@ class TestCrestQcgRun:
         install_crest(force=False)
         install_xtb(force=False)
 
-        solute = Atoms(
-            "OH2",
-            positions=[[0.0, 0.0, 0.1173], [-0.7572, 0.0, -0.4692], [0.7572, 0.0, -0.4692]],
-        )
-        solvent = solute.copy()
+        solute = _SOLUTE.copy()
+        solvent = _SOLVENT.copy()
 
         config = MicrosolvatorConfig(
             nsolv=1,
@@ -118,26 +135,13 @@ class TestCrestQcgRun:
         # stdout should contain CREST output
         assert result.stdout, "CREST produced no stdout"
 
-    @pytest.mark.xfail(
-        reason=(
-            "CREST --ensemble + --qcg segfaults (SIGSEGV) in the statically-linked "
-            "crest-gnu-12-ubuntu-latest binary on GitHub Actions runners. "
-            "Grow-only tests pass; the ensemble code path in CREST itself is unstable "
-            "in this build. Will auto-pass when a fixed CREST release is available."
-        ),
-        raises=subprocess.CalledProcessError,
-        strict=False,
-    )
     def test_h2o_microsolvation_with_ensemble(self, tmp_path):
         """Run grow + ensemble with 2 solvent molecules."""
         install_crest(force=False)
         install_xtb(force=False)
 
-        solute = Atoms(
-            "OH2",
-            positions=[[0.0, 0.0, 0.1173], [-0.7572, 0.0, -0.4692], [0.7572, 0.0, -0.4692]],
-        )
-        solvent = solute.copy()
+        solute = _SOLUTE.copy()
+        solvent = _SOLVENT.copy()
 
         config = MicrosolvatorConfig(
             nsolv=2,
@@ -164,11 +168,8 @@ class TestCrestQcgRun:
         install_crest(force=False)
         install_xtb(force=False)
 
-        solute = Atoms(
-            "OH2",
-            positions=[[0.0, 0.0, 0.1173], [-0.7572, 0.0, -0.4692], [0.7572, 0.0, -0.4692]],
-        )
-        solvent = solute.copy()
+        solute = _SOLUTE.copy()
+        solvent = _SOLVENT.copy()
 
         config = MicrosolvatorConfig(
             nsolv=1,
@@ -196,11 +197,8 @@ class TestCrestQcgRun:
         install_crest(force=False)
         install_xtb(force=False)
 
-        solute = Atoms(
-            "OH2",
-            positions=[[0.0, 0.0, 0.1173], [-0.7572, 0.0, -0.4692], [0.7572, 0.0, -0.4692]],
-        )
-        solvent = solute.copy()
+        solute = _SOLUTE.copy()
+        solvent = _SOLVENT.copy()
 
         config = MicrosolvatorConfig(nsolv=1, method="gfn2")
 
