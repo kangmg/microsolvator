@@ -68,7 +68,7 @@ def kabsch_align(mobile: Atoms, target: Atoms) -> Atoms:
     R = Vt.T @ D @ U.T
 
     aligned = mobile.copy()
-    aligned.positions = (P_c @ R) + q_com
+    aligned.positions = (P_c @ R.T) + q_com
     return aligned
 
 
