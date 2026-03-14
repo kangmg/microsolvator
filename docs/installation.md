@@ -79,12 +79,6 @@ The `microsolvator.workflow` subpackage additionally requires:
     PackmolConfig(packmol_executable="/path/to/packmol-20.15.3/packmol")
     ```
 
-=== "conda"
-
-    ```bash
-    conda install -c conda-forge packmol
-    ```
-
 **ASE calculator** (for MD equilibration and relaxation, Steps 3–4):
 
 ```bash
