@@ -1,6 +1,8 @@
 # microsolvator
 
-ASE-driven wrapper for running CREST quantum cluster growth microsolvation workflows.
+ASE-driven wrapper for CREST microsolvation and explicitly solvated reaction trajectory workflows.
+
+**[Documentation](https://kangmg.github.io/microsolvator)**
 
 ## Installation
 
@@ -8,71 +10,87 @@ ASE-driven wrapper for running CREST quantum cluster growth microsolvation workf
 pip install git+https://github.com/kangmg/microsolvator.git
 ```
 
+**Requirements:** Python >= 3.9, [ASE](https://wiki.fysik.dtu.dk/ase/) >= 3.26
+
+## Features
+
+| Package | Description |
+|---------|-------------|
+| `microsolvator` | CREST QCG wrapper — microsolvation of a single structure |
+| `microsolvator.workflow` | Full pipeline — solvated reaction trajectory from a NEB guess |
+
+```
+gas-phase trajectory  →  CREST QCG  →  Packmol box  →  MD equilibration  →  solvated trajectory
+```
+
 ## Quick Start
 
-```python
-from pathlib import Path
+### Microsolvation
 
+```python
 from ase.io import read
 from microsolvator import Microsolvator, MicrosolvatorConfig
 
-solute = read("benzoic_acid.xyz")
-solvent = read("water.xyz")
-
 config = MicrosolvatorConfig(
-    nsolv=3,
+    nsolv=5,
+    ensemble=True,
     implicit_model="alpb",
     implicit_solvent="h2o",
-    crest_executable="/abs/path/crest",
-    xtb_executable="/abs/path/xtb",
-    threads=12,
+    threads=8,
 )
 
 result = Microsolvator.run(
-    solute=solute,
-    solvent=solvent,
+    solute=read("benzoic_acid.xyz"),
+    solvent=read("water.xyz"),
     config=config,
     constrain_solute=True,
-    log_file="crest_run.log",
 )
 
-best = result.best_structure
-ensemble = result.ensemble
-final_cluster = result.final
-trajectory = result.traj
-
-# Dry run to inspect the command and generated inputs
-dry_run = Microsolvator.run(
-    solute=solute,
-    solvent=solvent,
-    config=config,
-    working_directory=Path("./scratch"),
-    prepare_only=True,
-)
-
-print(dry_run.shell_command)
+best = result.best_structure   # lowest-energy cluster
 ```
 
-`threads` maps directly to CREST's `--T` (number of threads); temperature is now passed via `--temp`.
-
-## Implicit Solvent Check
+### Solvated Trajectory Workflow
 
 ```python
-from microsolvator import supports_implicit_solvent
+from ase.io import read, write
+from xtb.ase.calculator import XTB
 
-supports_implicit_solvent(method="gfn2", model="alpb", solvent="h2o")
+from microsolvator import MicrosolvatorConfig
+from microsolvator.workflow import (
+    SolvatedTrajectoryBuilder,
+    SolvationWorkflowConfig,
+    PackmolConfig,
+    EquilibrationConfig,
+    RelaxationConfig,
+)
+
+images = read("neb_guess.traj", index=":")
+water  = read("water.xyz")
+
+config = SolvationWorkflowConfig(
+    microsolv=MicrosolvatorConfig(nsolv=5, ensemble=True, threads=8),
+    packmol=PackmolConfig(solvent_density=1.0, box_margin=12.0),
+    equilibration=EquilibrationConfig(
+        heating_schedule=[(100, 500), (200, 500), (300, 1000)],
+        nvt_steps=5000,
+    ),
+    relaxation=RelaxationConfig(method="optimize", fmax=0.05),
+)
+
+result = SolvatedTrajectoryBuilder.build(
+    reaction_images=images,
+    solvent=water,
+    config=config,
+    calculator=XTB(method="GFN-FF"),
+)
+
+write("solvated_guess.traj", result.solvated_images)
 ```
 
-## Execution Details
+## Binary Resolution
 
-For an in-depth explanation of how commands are built, how to override execution with `run_command`, and how working directories are managed, see [`docs/usage.md`](docs/usage.md).
+`Microsolvator` resolves CREST and xTB executables in order: explicit config paths → environment variables (`CREST_BIN`, `XTB_BIN`) → bundled binaries (installable via `install_crest`/`install_xtb`) → system `PATH`.
 
-### Binary Resolution
+## License
 
-`Microsolvator` resolves CREST and xTB executables using, in order, explicit config paths, environment variables (`CREST_BIN`, `XTB_BIN`), binaries bundled in `microsolvator/_bin/` (installable via `install_crest`/`install_xtb`), and finally the system `PATH`.
-
-Resolved paths are injected into the command line as absolute paths (including an explicit `--xnam /abs/path/to/xtb` flag) when available.
-
-### Logging
-
-During execution, CREST stdout/stderr are streamed in real time to `crest_run.log` (relative to the working directory by default). Override with `log_file="my_crest.log"` or disable by passing `log_file=None`.
+MIT
