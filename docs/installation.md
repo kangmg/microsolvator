@@ -56,11 +56,38 @@ The `microsolvator.workflow` subpackage additionally requires:
 - **Packmol** — for box solvation (Step 2)
 - An **ASE calculator** — for MD equilibration and relaxation (Steps 3–4)
 
-```bash
-# Packmol (example: conda)
-conda install -c conda-forge packmol
+=== "Build from source"
 
-# Calculator example: xtb-python
+    ```bash
+    apt-get update && apt-get install -y build-essential gfortran cmake
+
+    wget https://github.com/m3g/packmol/archive/refs/tags/v20.15.3.tar.gz
+    tar -xzf v20.15.3.tar.gz
+
+    cd packmol-20.15.3
+    ./configure
+    make
+    cd ..
+    chmod +x ./packmol-20.15.3/packmol
+
+    rm -rf ./v20.15.3.tar.gz
+    ```
+
+    Then either add the directory to `PATH` or pass the absolute path:
+
+    ```python
+    PackmolConfig(packmol_executable="/path/to/packmol-20.15.3/packmol")
+    ```
+
+=== "conda"
+
+    ```bash
+    conda install -c conda-forge packmol
+    ```
+
+**ASE calculator** (for MD equilibration and relaxation, Steps 3–4):
+
+```bash
 pip install xtb-python
 ```
 
