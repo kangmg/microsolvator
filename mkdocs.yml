@@ -1,0 +1,53 @@
+site_name: microsolvator
+site_description: ASE wrapper for CREST microsolvation and solvated reaction trajectory workflows
+site_url: https://kangmg.github.io/microsolvator
+repo_url: https://github.com/kangmg/microsolvator
+repo_name: kangmg/microsolvator
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Guides:
+    - Microsolvation: guide/microsolvation.md
+    - Solvated Trajectory: guide/workflow.md
+  - API Reference:
+    - microsolvator: api/microsolvator.md
+    - microsolvator.workflow: api/workflow.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/kangmg/microsolvator

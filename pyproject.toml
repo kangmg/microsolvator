@@ -21,6 +21,9 @@ dependencies = [
 tests = [
   "pytest>=8.4",
 ]
+docs = [
+  "mkdocs-material>=9.5",
+]
 
 [project.urls]
 Homepage = "https://github.com/kanmg/microsolvator"
