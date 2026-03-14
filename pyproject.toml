@@ -20,6 +20,7 @@ dependencies = [
 [project.optional-dependencies]
 tests = [
   "pytest>=8.4",
+  "tomli>=2.0; python_version < '3.11'",
 ]
 docs = [
   "mkdocs-material>=9.5",

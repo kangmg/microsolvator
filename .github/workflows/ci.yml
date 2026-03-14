@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.9", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
 
@@ -27,7 +27,7 @@ jobs:
         run: pip install -e ".[tests]"
 
       - name: Run unit tests
-        run: python -m pytest tests/test_microsolvator.py tests/test_code_review_fixes.py -v
+        run: python -m pytest tests/test_microsolvator.py tests/test_code_review_fixes.py tests/test_workflow.py -v
 
   # ---------------------------------------------------------------
   # 2. Integration tests — install CREST/xTB and run real QCG jobs
