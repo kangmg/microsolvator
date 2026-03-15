@@ -8,6 +8,7 @@ import ase.units as units
 from ase import Atoms
 from ase.constraints import FixAtoms
 from ase.md.langevin import Langevin
+from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
 
 from .config import EquilibrationConfig
 
@@ -20,11 +21,18 @@ def equilibrate(
     traj_path: Optional[str] = None,
     log_callback: Optional[Callable[[str, object], None]] = None,
 ) -> Atoms:
-    """Run constrained MD to equilibrate the bulk solvent.
+    """Run constrained MD to equilibrate the solvent.
 
-    Atoms ``0 … n_fixed-1`` (the microsolvated cluster) are frozen via
-    :class:`~ase.constraints.FixAtoms`.  The remaining bulk solvent atoms
-    are free to move.
+    Atoms ``0 … n_fixed-1`` are frozen via
+    :class:`~ase.constraints.FixAtoms`.  When called from the full
+    workflow, only the solute atoms are frozen so that the
+    microsolvation shell equilibrates together with the bulk solvent.
+
+    Before the first MD step, velocities are sampled from a
+    Maxwell–Boltzmann distribution at the initial temperature (first
+    entry in ``heating_schedule``, or ``config.temperature`` if no
+    schedule is provided).  Fixed atoms are zeroed out automatically
+    by the ASE constraint.
 
     Equilibration proceeds in up to three phases:
 
@@ -39,7 +47,7 @@ def equilibrate(
     system:
         The Packmol-generated solvated box (modified in-place on a copy).
     n_fixed:
-        Number of leading atoms to freeze (solute + microsolvation shell).
+        Number of leading atoms to freeze.
     calculator:
         Any ASE-compatible calculator.  Charge / multiplicity should be
         configured on the calculator before passing.
@@ -61,6 +69,19 @@ def equilibrate(
 
     if system.cell.any() and not system.pbc.any():
         system.pbc = True
+
+    # Initialize velocities from Maxwell-Boltzmann distribution.
+    # Use the first heating temperature if a schedule is given,
+    # otherwise use the production temperature.
+    if config.heating_schedule:
+        init_temp = config.heating_schedule[0][0]
+    else:
+        init_temp = config.temperature
+    MaxwellBoltzmannDistribution(system, temperature_K=init_temp)
+    # Zero out velocities of frozen atoms (FixAtoms handles forces,
+    # but we must also zero momenta explicitly).
+    if n_fixed > 0:
+        system.arrays["momenta"][:n_fixed] = 0.0
 
     traj_writer = None
     if traj_path:

@@ -106,6 +106,14 @@ class TestCountSolventMolecules:
         n = count_solvent_molecules(1.0, water, 0.001)
         assert n >= 1
 
+    def test_cluster_volume_excluded(self):
+        water = _water()
+        n_no_cluster = count_solvent_molecules(30.0, water, 1.0)
+        # A cluster occupying some volume should reduce the count
+        cluster = Atoms("Cu10", positions=[[i * 2.5, 0, 0] for i in range(10)])
+        n_with_cluster = count_solvent_molecules(30.0, water, 1.0, cluster=cluster)
+        assert n_with_cluster < n_no_cluster
+
 
 class TestValidatePackmolOutput:
     def test_valid(self):
