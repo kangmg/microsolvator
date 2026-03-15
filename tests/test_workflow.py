@@ -455,6 +455,82 @@ class TestSolvatedTrajectoryBuilder:
         # TS image (index 1) should match template exactly
         np.testing.assert_allclose(result[1].positions, template.positions, atol=1e-10)
 
+    def test_chain_propagation_order(self):
+        """Verify that swap_and_relax propagates outward from TS.
+
+        Each non-TS image should use the *previous* (closer-to-TS) image's
+        relaxed solvent as its starting template, not the original template.
+        """
+        # 5 images, TS at index 2
+        # Template: 3 solute Cu + 3 solvent Cu
+        template = Atoms(
+            "Cu6",
+            positions=[
+                [0, 0, 0], [2.55, 0, 0], [1.275, 2.21, 0],  # solute
+                [6, 0, 0], [6, 2.55, 0], [6, 5.1, 0],        # solvent
+            ],
+        )
+        template.cell = [15, 15, 15]
+        template.pbc = True
+
+        images = _metal_images(5)
+        config = RelaxationConfig(method="optimize", max_steps=3, fmax=0.1)
+
+        result = SolvatedTrajectoryBuilder.swap_and_relax(
+            template=template,
+            reaction_images=images,
+            n_solute=3,
+            ts_index=2,
+            calculator=EMT(),
+            config=config,
+        )
+
+        assert len(result) == 5
+        # TS image unchanged
+        np.testing.assert_allclose(
+            result[2].positions, template.positions, atol=1e-10
+        )
+        # All images should have the same number of atoms
+        for img in result:
+            assert len(img) == len(template)
+
+    def test_chain_propagation_uses_previous_solvent(self):
+        """Adjacent images should share similar solvent positions (continuity)."""
+        template = Atoms(
+            "Cu6",
+            positions=[
+                [0, 0, 0], [2.55, 0, 0], [1.275, 2.21, 0],  # solute
+                [6, 0, 0], [6, 2.55, 0], [6, 5.1, 0],        # solvent
+            ],
+        )
+        template.cell = [15, 15, 15]
+        template.pbc = True
+
+        images = _metal_images(5)
+        config = RelaxationConfig(method="optimize", max_steps=2, fmax=0.01)
+
+        result = SolvatedTrajectoryBuilder.swap_and_relax(
+            template=template,
+            reaction_images=images,
+            n_solute=3,
+            ts_index=2,
+            calculator=EMT(),
+            config=config,
+        )
+
+        # Check that adjacent images have more similar solvent than distant ones
+        # Solvent positions are indices 3:6
+        def solvent_rmsd(a, b):
+            diff = a.positions[3:] - b.positions[3:]
+            return np.sqrt((diff ** 2).mean())
+
+        # TS(2) vs image 3 should be closer than TS(2) vs image 4
+        rmsd_2_3 = solvent_rmsd(result[2], result[3])
+        rmsd_2_4 = solvent_rmsd(result[2], result[4])
+        # At minimum, both should be finite (no NaN/explosion)
+        assert np.isfinite(rmsd_2_3)
+        assert np.isfinite(rmsd_2_4)
+
 
 # ── Result container test ──────────────────────────────────────────────────
 

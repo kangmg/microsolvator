@@ -161,10 +161,10 @@ boxed, n_bulk = SolvatedTrajectoryBuilder.pack_solvent_box(
     config=config.packmol,
 )
 
-# Step 3 only
+# Step 3 only — freeze solute only; shell equilibrates with bulk
 equilibrated = SolvatedTrajectoryBuilder.equilibrate(
     system=boxed,
-    n_fixed=len(cluster),
+    n_fixed=len(images[0]),       # solute atoms only
     calculator=XTB(method="GFN-FF"),
     config=config.equilibration,
     traj_path="equil.traj",
@@ -205,14 +205,27 @@ The equilibration runs in up to three phases:
 2. **NPT** — optional; uses `ase.md.npt.NPT` (Nosé-Hoover barostat) — enable with `npt_steps > 0`
 3. **NVT production** — Langevin dynamics at `temperature` for `nvt_steps` steps
 
-The cluster (indices `0 … n_cluster-1`) is frozen with `ase.constraints.FixAtoms` throughout.
+Only the solute atoms (indices `0 … n_solute-1`) are frozen with `ase.constraints.FixAtoms`.
+The microsolvation shell is free to equilibrate together with the bulk solvent, forming a natural shell–bulk interface.
 
 ## Swap & alignment details
 
-For each non-TS image, the solute is replaced via Kabsch alignment (SVD-based, numpy only — no scipy):
+Starting from the TS image, the builder propagates **outward in both directions** (TS→product and TS→reactant).
+Each image inherits the relaxed solvent from the previous (closer-to-TS) image as its starting template:
 
-1. Compute optimal rotation + translation that minimises RMSD between the new solute and the TS solute
-2. Replace positions `[0:n_solute]` in the solvated template
-3. Run constrained relaxation (solute fixed, solvent free)
+```
+         ← TS-2 ← TS-1 ← [TS] → TS+1 → TS+2 →
+```
+
+For each non-TS image:
+
+1. Swap the solute via Kabsch alignment onto the **previous image's** solute (not the original TS template)
+2. Freeze only the solute (`0:n_solute`); microsolvation shell and bulk solvent are free to relax
+3. Run constrained relaxation so the shell adapts to the new solute geometry
+
+This chain propagation ensures:
+
+- **Continuity** — adjacent images share similar solvent configurations
+- **Shell adaptation** — the microsolvation shell re-optimises for each image's charge distribution and geometry
 
 The TS image (`ts_index`) is returned as a direct copy of the equilibrated template — no swap, no drift.

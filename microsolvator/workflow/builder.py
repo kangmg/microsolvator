@@ -133,13 +133,16 @@ class SolvatedTrajectoryBuilder:
         boxed_system.info["multiplicity"] = multiplicity
 
         # ── Step 3: MD equilibration ────────────────────────────────────────
+        # Only freeze the solute atoms; the microsolvation shell is free to
+        # equilibrate together with the bulk solvent so that the
+        # shell–bulk interface relaxes naturally.
         if log_callback:
-            log_callback("equilibration", {"n_fixed": n_cluster})
+            log_callback("equilibration", {"n_fixed": n_solute})
 
         traj_path = str(workdir / "equilibration.traj") if workdir else None
         equilibrated_system = cls.equilibrate(
             system=boxed_system,
-            n_fixed=n_cluster,
+            n_fixed=n_solute,
             calculator=calculator,
             config=config.equilibration,
             traj_path=traj_path,
@@ -246,20 +249,42 @@ class SolvatedTrajectoryBuilder:
         calculator,
         config: RelaxationConfig,
     ) -> List[Atoms]:
-        """Step 4: Swap each image's solute and relax the solvent interface.
+        """Step 4: Swap each image's solute and relax the solvent.
+
+        Propagates outward from the TS image in both directions so that
+        each image inherits the relaxed solvent from the previous
+        (closer-to-TS) image, ensuring continuity along the path.
+
+        Only the solute atoms (indices ``0:n_solute``) are frozen during
+        relaxation.  The microsolvation shell and bulk solvent are free
+        to adapt to each image's solute geometry.
 
         The TS image (``ts_index``) is returned as a copy of *template*
-        without any swap or relaxation, avoiding spurious numerical drift.
+        without any swap or relaxation.
         """
-        results: List[Atoms] = []
-        for i, image in enumerate(reaction_images):
-            if i == ts_index:
-                results.append(template.copy())
-                continue
-            swapped = swap_solute(template, image, n_solute)
+        n_images = len(reaction_images)
+        results: List[Optional[Atoms]] = [None] * n_images
+
+        # TS image: direct copy of the equilibrated template
+        results[ts_index] = template.copy()
+
+        # Forward: TS+1, TS+2, … → product
+        current = template
+        for i in range(ts_index + 1, n_images):
+            swapped = swap_solute(current, reaction_images[i], n_solute)
             relaxed = relax_interface(swapped, n_solute, calculator, config)
-            results.append(relaxed)
-        return results
+            results[i] = relaxed
+            current = relaxed
+
+        # Backward: TS-1, TS-2, … → reactant
+        current = template
+        for i in range(ts_index - 1, -1, -1):
+            swapped = swap_solute(current, reaction_images[i], n_solute)
+            relaxed = relax_interface(swapped, n_solute, calculator, config)
+            results[i] = relaxed
+            current = relaxed
+
+        return results  # type: ignore[return-value]
 
 
 def _resolve_workdir(config: SolvationWorkflowConfig) -> Optional[Path]:
