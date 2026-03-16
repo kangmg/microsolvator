@@ -48,6 +48,7 @@ The easiest way to solvate a reaction trajectory — one function call:
 
 ```python
 from ase.io import read, write
+from xtb.ase.calculator import XTB
 from microsolvator.workflow import solvate_trajectory
 
 images = read("neb_guess.traj", index=":")
@@ -55,7 +56,7 @@ water  = read("water.xyz")
 
 result = solvate_trajectory(
     images, water,
-    calc=lambda: EMT(),   # calculator factory (recommended)
+    calc=lambda: XTB(method="GFN-FF"),  # calculator factory (recommended)
     nsolv=5,
     solvent_density=1.0,
 )

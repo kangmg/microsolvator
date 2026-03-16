@@ -28,6 +28,7 @@ Atom ordering is preserved throughout: `[solute | microsolv_shell | bulk_solvent
 
 ```python
 from ase.io import read, write
+from xtb.ase.calculator import XTB
 from microsolvator.workflow import solvate_trajectory
 
 images = read("neb_guess.traj", index=":")
@@ -145,7 +146,7 @@ The `calc` parameter accepts either a calculator **instance** or a **factory** c
 
 ## Practical examples
 
-### S~N~2 reaction in water
+### S<sub>N</sub>2 reaction in water
 
 ```python
 from ase.io import read, write
@@ -180,7 +181,7 @@ print(f"  Cluster (solute + shell): {result.n_cluster_atoms}")
 
 ```python
 from ase.io import read, write
-from ase.calculators.emt import EMT
+from xtb.ase.calculator import XTB
 from microsolvator import MicrosolvatorConfig
 from microsolvator.workflow import (
     SolvatedTrajectoryBuilder,
@@ -220,7 +221,7 @@ result = SolvatedTrajectoryBuilder.build(
     reaction_images=images,
     solvent=toluene,
     config=config,
-    calc=lambda: EMT(),  # replace with your calculator
+    calc=lambda: XTB(method="GFN-FF"),
 )
 
 write("da_solvated.traj", result.solvated_images)
