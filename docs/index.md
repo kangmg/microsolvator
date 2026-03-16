@@ -42,7 +42,42 @@ result = Microsolvator.run(
 best = result.best_structure   # lowest-energy cluster (ensemble=True)
 ```
 
-### Solvated trajectory
+### Solvated trajectory (simple)
+
+The easiest way to solvate a reaction trajectory — one function call:
+
+```python
+from ase.io import read, write
+from microsolvator.workflow import solvate_trajectory
+
+images = read("neb_guess.traj", index=":")
+water  = read("water.xyz")
+
+result = solvate_trajectory(
+    images, water,
+    calc=lambda: EMT(),   # calculator factory (recommended)
+    nsolv=5,
+    solvent_density=1.0,
+)
+
+write("solvated_guess.traj", result.solvated_images)
+```
+
+!!! tip "Calculator factory"
+    Passing a **factory** (zero-argument callable) instead of a calculator instance
+    avoids state leakage between MD/optimization steps:
+
+    ```python
+    # ✅ Factory — each step gets a fresh calculator
+    calc=lambda: XTB(method="GFN-FF")
+
+    # ⚠️ Instance — deep-copied internally, but some calculators don't copy cleanly
+    calc=XTB(method="GFN-FF")
+    ```
+
+### Solvated trajectory (advanced)
+
+For fine-grained control, use `SolvatedTrajectoryBuilder` with explicit configs:
 
 ```python
 from ase.io import read, write
@@ -74,7 +109,7 @@ result = SolvatedTrajectoryBuilder.build(
     reaction_images=images,
     solvent=water,
     config=config,
-    calculator=XTB(method="GFN-FF"),
+    calc=lambda: XTB(method="GFN-FF"),
 )
 
 write("solvated_guess.traj", result.solvated_images)
