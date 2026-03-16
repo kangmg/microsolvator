@@ -26,7 +26,7 @@ from microsolvator.workflow.packmol import (
 )
 from microsolvator.workflow.swap import kabsch_align, relax_interface, swap_solute
 from microsolvator.workflow.equilibration import equilibrate
-from microsolvator.workflow.builder import SolvatedTrajectoryBuilder
+from microsolvator.workflow.builder import SolvatedTrajectoryBuilder, _make_calculator, solvate_trajectory
 from microsolvator.workflow.results import SolvatedTrajectoryResult
 from microsolvator import MicrosolvatorConfig
 
@@ -539,8 +539,96 @@ class TestSolvatedTrajectoryBuilder:
         assert np.isfinite(rmsd_2_3)
         assert np.isfinite(rmsd_2_4)
 
+    def test_swap_and_relax_with_calc_param(self):
+        """swap_and_relax accepts `calc` (new API) in addition to `calculator`."""
+        template = Atoms(
+            "Cu3Au3",
+            positions=[
+                [0, 0, 0], [2.5, 0, 0], [1.25, 2.16, 0],
+                [10, 10, 10], [12, 10, 10], [11, 12, 10],
+            ],
+        )
+        template.cell = [20, 20, 20]
+        template.pbc = True
+
+        images = _metal_images(3)
+        config = RelaxationConfig(method="optimize", max_steps=3)
+
+        result = SolvatedTrajectoryBuilder.swap_and_relax(
+            template=template,
+            reaction_images=images,
+            n_solute=3,
+            ts_index=1,
+            calc=EMT(),
+            config=config,
+        )
+        assert len(result) == 3
+
+    def test_swap_and_relax_with_factory(self):
+        """swap_and_relax works with a calculator factory callable."""
+        template = Atoms(
+            "Cu3Au3",
+            positions=[
+                [0, 0, 0], [2.5, 0, 0], [1.25, 2.16, 0],
+                [10, 10, 10], [12, 10, 10], [11, 12, 10],
+            ],
+        )
+        template.cell = [20, 20, 20]
+        template.pbc = True
+
+        images = _metal_images(3)
+        config = RelaxationConfig(method="optimize", max_steps=3)
+
+        call_count = [0]
+
+        def calc_factory():
+            call_count[0] += 1
+            return EMT()
+
+        result = SolvatedTrajectoryBuilder.swap_and_relax(
+            template=template,
+            reaction_images=images,
+            n_solute=3,
+            ts_index=1,
+            calc=calc_factory,
+            config=config,
+        )
+        assert len(result) == 3
+        # Factory should have been called once per non-TS image (2 images)
+        assert call_count[0] == 2
+
 
 # ── Result container test ──────────────────────────────────────────────────
+
+
+class TestMakeCalculator:
+    def test_deepcopy_instance(self):
+        calc = EMT()
+        result = _make_calculator(calc)
+        assert isinstance(result, EMT)
+        assert result is not calc
+
+    def test_factory_callable(self):
+        def factory():
+            return EMT()
+
+        result = _make_calculator(factory)
+        assert isinstance(result, EMT)
+
+    def test_lambda_factory(self):
+        result = _make_calculator(lambda: EMT())
+        assert isinstance(result, EMT)
+
+
+class TestSolvateTrajectoryImport:
+    def test_importable_from_package(self):
+        from microsolvator.workflow import solvate_trajectory as st
+        assert callable(st)
+
+    def test_no_calc_raises(self):
+        images = _metal_images(3)
+        with pytest.raises(TypeError, match="calculator is required"):
+            solvate_trajectory(images, _water(), calc=None)
 
 
 class TestSolvatedTrajectoryResult:
