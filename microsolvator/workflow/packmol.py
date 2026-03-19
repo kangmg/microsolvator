@@ -166,7 +166,8 @@ class PackmolSolvator:
                 n_solvent = config.n_bulk_solvent
             else:
                 n_solvent = count_solvent_molecules(
-                    box_size, solvent, config.solvent_density  # type: ignore[arg-type]
+                    box_size, solvent, config.solvent_density,  # type: ignore[arg-type]
+                    cluster=cluster,
                 )
 
             cluster_path = wd / "cluster.xyz"

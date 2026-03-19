@@ -5,16 +5,15 @@ initial gas-phase reaction path.
 
 Typical usage
 -------------
->>> from microsolvator.workflow import (
-...     SolvatedTrajectoryBuilder,
-...     SolvationWorkflowConfig,
-...     PackmolConfig,
-...     EquilibrationConfig,
-...     RelaxationConfig,
+>>> from microsolvator.workflow import solvate_trajectory
+>>> result = solvate_trajectory(
+...     images, water,
+...     calc=lambda: XTB(method="GFN-FF"),
+...     nsolv=5,
 ... )
 """
 
-from .builder import SolvatedTrajectoryBuilder
+from .builder import SolvatedTrajectoryBuilder, solvate_trajectory
 from .config import (
     EquilibrationConfig,
     PackmolConfig,
@@ -24,6 +23,7 @@ from .config import (
 from .results import SolvatedTrajectoryResult
 
 __all__ = [
+    "solvate_trajectory",
     "SolvatedTrajectoryBuilder",
     "SolvationWorkflowConfig",
     "PackmolConfig",

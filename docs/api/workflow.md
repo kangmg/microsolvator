@@ -1,5 +1,46 @@
 # microsolvator.workflow
 
+## `solvate_trajectory` — one-call interface
+
+```python
+from microsolvator.workflow import solvate_trajectory
+```
+
+```python
+solvate_trajectory(
+    reaction_images: list[Atoms],
+    solvent: Atoms,
+    *,
+    calc,                            # calculator instance or factory
+    nsolv: int = 5,
+    solvent_density: float = 1.0,
+    ts_index: int | None = None,
+    config: SolvationWorkflowConfig | None = None,
+    **kwargs,
+) -> SolvatedTrajectoryResult
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `reaction_images` | NEB / string-method images |
+| `solvent` | One solvent molecule |
+| `calc` | Calculator instance (deep-copied) or zero-arg factory callable |
+| `nsolv` | Number of microsolvation-shell molecules (ignored when `config` is given) |
+| `solvent_density` | Target bulk density in g/cm³ (ignored when `config` is given) |
+| `ts_index` | TS image index; `None` → `len(images) // 2` |
+| `config` | Full `SolvationWorkflowConfig` for fine-grained control |
+| `**kwargs` | Forwarded to `SolvatedTrajectoryBuilder.build` (e.g. `log_callback`) |
+
+```python
+# Minimal usage
+result = solvate_trajectory(images, water, calc=lambda: XTB(method="GFN-FF"))
+
+# With custom config
+result = solvate_trajectory(images, water, calc=lambda: XTB(method="GFN-FF"), config=my_config)
+```
+
+---
+
 ## `SolvatedTrajectoryBuilder`
 
 ```python
@@ -14,7 +55,7 @@ SolvatedTrajectoryBuilder.build(
     reaction_images: list[Atoms],
     solvent: Atoms,
     config: SolvationWorkflowConfig,
-    calculator,
+    calc,                            # calculator instance or factory
     log_callback: Callable[[str, Any], None] | None = None,
 ) -> SolvatedTrajectoryResult
 ```
@@ -24,8 +65,11 @@ SolvatedTrajectoryBuilder.build(
 | `reaction_images` | NEB / string-method images |
 | `solvent` | One solvent molecule |
 | `config` | `SolvationWorkflowConfig` |
-| `calculator` | Any ASE-compatible calculator |
-| `log_callback` | Called at each step boundary: `callback(step_name, info)` |
+| `calc` | Calculator instance (deep-copied per step) or zero-arg factory callable |
+| `log_callback` | Called at each step: `callback(step_name, info)` |
+
+!!! note "Backwards compatibility"
+    `calculator=` is still accepted as an alias for `calc=`.
 
 ### Individual steps
 
@@ -39,15 +83,30 @@ SolvatedTrajectoryBuilder.pack_solvent_box(cluster, solvent, config, workdir=Non
     -> tuple[Atoms, int]  # (boxed_system, n_bulk_solvent)
 
 # Step 3
-SolvatedTrajectoryBuilder.equilibrate(system, n_fixed, calculator, config,
+SolvatedTrajectoryBuilder.equilibrate(system, n_fixed, calc, config,
                                        traj_path=None, log_callback=None)
     -> Atoms
 
 # Step 4
 SolvatedTrajectoryBuilder.swap_and_relax(template, reaction_images, n_solute,
-                                          ts_index, calculator, config)
+                                          ts_index, calc, config)
     -> list[Atoms]
 ```
+
+Steps 3 and 4 also accept `calculator=` as a backwards-compatible alias for `calc=`.
+
+---
+
+## Calculator types
+
+The `calc` parameter accepts two types:
+
+| Type | Example | Behavior |
+|------|---------|----------|
+| Instance | `calc=EMT()` | `copy.deepcopy(calc)` for each step |
+| Factory | `calc=lambda: XTB(method="GFN-FF")` | `calc()` called for each step |
+
+Use a **factory** for stateful calculators (GPAW, VASP, CP2K, …) that may not survive deep-copy.
 
 ---
 
@@ -161,4 +220,5 @@ from microsolvator.workflow.utils import (
     count_solvent_molecules,
     validate_packmol_output,
 )
+from microsolvator.workflow.builder import _make_calculator
 ```

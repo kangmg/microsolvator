@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 import numpy as np
 from ase import Atoms
 from ase.data import atomic_masses
@@ -29,8 +31,13 @@ def count_solvent_molecules(
     box_size: float,
     solvent: Atoms,
     density: float,
+    cluster: Optional[Atoms] = None,
 ) -> int:
-    """Estimate the number of solvent molecules to fill a cubic box.
+    """Estimate the number of solvent molecules to fill the free volume.
+
+    The cluster's bounding-sphere volume is subtracted from the box
+    volume so that the target density applies only to the region
+    actually available to bulk solvent.
 
     Parameters
     ----------
@@ -40,13 +47,27 @@ def count_solvent_molecules(
         One solvent molecule (used to obtain its molar mass).
     density:
         Target density in g/cm³.
+    cluster:
+        If given, the cluster whose volume is excluded from the
+        available space.  ``None`` uses the full box volume.
 
     Returns
     -------
     int
         Number of solvent molecules (at least 1).
     """
-    vol_cm3 = (box_size ** 3) * _ANG3_TO_CM3
+    box_vol = box_size ** 3
+
+    if cluster is not None:
+        pos = cluster.positions
+        center = pos.mean(axis=0)
+        r_max = float(np.sqrt(((pos - center) ** 2).sum(axis=1).max()))
+        # Add typical vdW radius (~1.5 Å) to get effective exclusion sphere
+        r_eff = r_max + 1.5
+        cluster_vol = (4.0 / 3.0) * np.pi * r_eff ** 3
+        box_vol = max(box_vol - cluster_vol, box_vol * 0.1)
+
+    vol_cm3 = box_vol * _ANG3_TO_CM3
     molar_mass = float(sum(atomic_masses[n] for n in solvent.numbers))
     n = int(vol_cm3 * density * _N_A / molar_mass)
     return max(n, 1)
